@@ -1,15 +1,35 @@
+import sys
+print("==> Starting import process...", flush=True)
+
 import logging
+print("==> Logging imported", flush=True)
+
 from fastapi import FastAPI, Depends, Request
+print("==> FastAPI imported", flush=True)
+
 from fastapi.middleware.cors import CORSMiddleware
+print("==> CORS imported", flush=True)
+
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+print("==> SlowAPI imported", flush=True)
+
 from app.core.dependencies import get_settings
 from app.core.config import Settings, settings
+print("==> Config imported", flush=True)
+
 from app.core.database import init_db
+print("==> Database imported", flush=True)
+
 from app.api import documents
+print("==> Documents API imported", flush=True)
+
 from app.api import auth
+print("==> Auth API imported", flush=True)
+
 from app.api import chat
+print("==> Chat API imported", flush=True)
 
 logging.basicConfig(
     level=logging.INFO,
