@@ -47,6 +47,57 @@ async def startup_event():
 def root():
     return {"message": "AskBase API is running", "status": "ok"}
 
+@app.get("/seed-admin")
+def seed_admin_user():
+    """
+    One-time endpoint to create default admin user.
+    Visit this URL once after deployment to create the admin account.
+    """
+    from app.core.database import get_session_local, init_db
+    from app.models.user import UserDB, UserRole
+    from app.core.security import hash_password
+    
+    try:
+        init_db()
+        SessionLocal = get_session_local()
+        db = SessionLocal()
+        
+        # Check if users already exist
+        existing_users = db.query(UserDB).count()
+        if existing_users > 0:
+            db.close()
+            return {
+                "status": "skipped",
+                "message": f"Database already has {existing_users} user(s)",
+                "note": "Admin user may already exist"
+            }
+        
+        # Create admin user
+        admin = UserDB(
+            email="admin@company.com",
+            hashed_password=hash_password("admin123"),
+            role=UserRole.admin,
+            is_active=1
+        )
+        db.add(admin)
+        db.commit()
+        db.close()
+        
+        return {
+            "status": "success",
+            "message": "Admin user created successfully!",
+            "credentials": {
+                "email": "admin@company.com",
+                "password": "admin123",
+                "note": "Please change this password after first login"
+            }
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Failed to create admin user: {str(e)}"
+        }
+
 @app.get("/health")
 def health_check(settings: Settings = Depends(get_settings)):
     from app.core.database import get_engine
