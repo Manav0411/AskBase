@@ -7,7 +7,6 @@ from slowapi.errors import RateLimitExceeded
 from app.core.dependencies import get_settings
 from app.core.config import Settings, settings
 from app.core.database import init_db
-from app.vector.store import load_vector_store
 from app.api import documents
 from app.api import auth
 from app.api import chat
@@ -16,8 +15,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler('askbase.log')
+        logging.StreamHandler()
     ]
 )
 
@@ -42,10 +40,18 @@ app.add_middleware(
 @app.on_event("startup")
 def startup_event():
     logger.info("Starting application...")
-    init_db()
-    logger.info("Database initialized successfully")
+    try:
+        init_db()
+        logger.info("Database initialized successfully")
+    except Exception as e:
+        logger.error(f"Database initialization failed: {str(e)}")
+        logger.info("Continuing with startup - database will retry on first request")
     # Vector store will be loaded lazily on first use
     logger.info("Application startup complete")
+
+@app.get("/")
+def root():
+    return {"message": "AskBase API is running", "status": "ok"}
 
 @app.get("/health")
 def health_check(settings: Settings = Depends(get_settings)):
