@@ -35,8 +35,6 @@ def get_session_local():
         SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=get_engine())
     return SessionLocal
 
-_db_initialized = False
-
 def get_db():
     """
     Dependency function to get database session.
