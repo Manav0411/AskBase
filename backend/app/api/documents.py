@@ -213,7 +213,10 @@ def grant_document_access(
     ).first()
     
     if existing:
-        raise HTTPException(status_code=400, detail="Permission already exists")
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Permission already exists: {data.permission_type} '{data.granted_to}' already has access to this document"
+        )
     
     permission = DocumentPermissionDB(
         document_id=document_id,
