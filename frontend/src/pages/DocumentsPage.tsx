@@ -34,7 +34,6 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
-  TextField,
   Select,
   MenuItem,
   InputLabel,
@@ -80,7 +79,6 @@ export default function DocumentsPage() {
   const [selectedRoles, setSelectedRoles] = useState<string[]>([])
   const [shareDialogOpen, setShareDialogOpen] = useState(false)
   const [selectedDocumentForSharing, setSelectedDocumentForSharing] = useState<Document | null>(null)
-  const [newPermissionType, setNewPermissionType] = useState<'user' | 'role'>('role')
   const [newPermissionValue, setNewPermissionValue] = useState('')
   const [expandedDocument, setExpandedDocument] = useState<string | false>(false)
 
@@ -280,7 +278,7 @@ export default function DocumentsPage() {
     if (selectedDocumentForSharing && newPermissionValue.trim()) {
       shareMutation.mutate({
         documentId: selectedDocumentForSharing.id,
-        permissionType: newPermissionType,
+        permissionType: 'role',
         grantedTo: newPermissionValue.trim(),
       })
     }
@@ -695,25 +693,18 @@ export default function DocumentsPage() {
               {selectedDocumentForSharing?.original_filename}
             </Typography>
             
-            <FormControl fullWidth sx={{ mb: 2, mt: 2 }}>
-              <InputLabel>Permission Type</InputLabel>
+            <FormControl fullWidth sx={{ mt: 2 }}>
+              <InputLabel>Select Role</InputLabel>
               <Select
-                value={newPermissionType}
-                onChange={(e) => setNewPermissionType(e.target.value as 'user' | 'role')}
-                label="Permission Type"
+                value={newPermissionValue}
+                onChange={(e) => setNewPermissionValue(e.target.value)}
+                label="Select Role"
               >
-                <MenuItem value="role">Role</MenuItem>
-                <MenuItem value="user">User ID</MenuItem>
+                <MenuItem value="hr">HR</MenuItem>
+                <MenuItem value="engineer">Engineer</MenuItem>
+                <MenuItem value="intern">Intern</MenuItem>
               </Select>
             </FormControl>
-
-            <TextField
-              fullWidth
-              label={newPermissionType === 'role' ? 'Role Name (e.g., hr, engineer, intern)' : 'User ID'}
-              value={newPermissionValue}
-              onChange={(e) => setNewPermissionValue(e.target.value)}
-              placeholder={newPermissionType === 'role' ? 'hr' : '123'}
-            />
 
             {shareMutation.isError && (
               <Alert severity="error" sx={{ mt: 2 }}>
