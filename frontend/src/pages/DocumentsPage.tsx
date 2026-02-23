@@ -284,6 +284,13 @@ export default function DocumentsPage() {
     }
   }
 
+  const handleCloseShareDialog = () => {
+    setShareDialogOpen(false)
+    shareMutation.reset()
+    setNewPermissionValue('')
+    setSelectedDocumentForSharing(null)
+  }
+
   const handleRevokePermission = (documentId: string, permissionId: number, grantedTo: string) => {
     if (window.confirm(`Are you sure you want to revoke access for "${grantedTo}"?`)) {
       revokeMutation.mutate({ documentId, permissionId })
@@ -676,7 +683,7 @@ export default function DocumentsPage() {
         {/* Share Document Dialog */}
         <Dialog 
           open={shareDialogOpen} 
-          onClose={() => setShareDialogOpen(false)} 
+          onClose={handleCloseShareDialog} 
           maxWidth="sm" 
           fullWidth
           PaperProps={{
@@ -697,7 +704,10 @@ export default function DocumentsPage() {
               <InputLabel>Select Role</InputLabel>
               <Select
                 value={newPermissionValue}
-                onChange={(e) => setNewPermissionValue(e.target.value)}
+                onChange={(e) => {
+                  setNewPermissionValue(e.target.value)
+                  shareMutation.reset() 
+                }}
                 label="Select Role"
               >
                 <MenuItem value="hr">HR</MenuItem>
@@ -708,13 +718,15 @@ export default function DocumentsPage() {
 
             {shareMutation.isError && (
               <Alert severity="error" sx={{ mt: 2 }}>
-                Failed to share document. Please check the input and try again.
+                {shareMutation.error instanceof Error 
+                  ? (shareMutation.error as any)?.response?.data?.detail || shareMutation.error.message
+                  : 'Failed to share document. Please check the input and try again.'}
               </Alert>
             )}
             {shareMutation.isPending && <LinearProgress sx={{ mt: 2 }} />}
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setShareDialogOpen(false)} disabled={shareMutation.isPending}>
+            <Button onClick={handleCloseShareDialog} disabled={shareMutation.isPending}>
               Cancel
             </Button>
             <Button
