@@ -38,16 +38,10 @@ app.add_middleware(
 )
 
 @app.on_event("startup")
-def startup_event():
-    logger.info("Starting application...")
-    try:
-        init_db()
-        logger.info("Database initialized successfully")
-    except Exception as e:
-        logger.error(f"Database initialization failed: {str(e)}")
-        logger.info("Continuing with startup - database will retry on first request")
-    # Vector store will be loaded lazily on first use
-    logger.info("Application startup complete")
+async def startup_event():
+    logger.info("==> Application starting...")
+    logger.info("==> Skipping database initialization - will initialize on first request")
+    logger.info("==> Application startup complete - ready to accept connections")
 
 @app.get("/")
 def root():
@@ -55,7 +49,7 @@ def root():
 
 @app.get("/health")
 def health_check(settings: Settings = Depends(get_settings)):
-    from app.core.database import engine
+    from app.core.database import get_engine
     from sqlalchemy import text
     from app.vector.store import vector_store, get_cache_stats
     
@@ -69,6 +63,7 @@ def health_check(settings: Settings = Depends(get_settings)):
     }
     
     try:
+        engine = get_engine()
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
         health_status["dependencies"]["database"] = "ok"

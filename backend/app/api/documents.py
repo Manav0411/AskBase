@@ -150,7 +150,8 @@ async def upload_document(
     db.commit()
     db.refresh(document)
 
-    from app.core.database import SessionLocal
+    from app.core.database import get_session_local
+    SessionLocal = get_session_local()
     bg_db = SessionLocal()
     background_tasks.add_task(ingest_file, document_id, file_path, bg_db)
 

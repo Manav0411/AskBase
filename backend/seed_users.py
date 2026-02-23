@@ -2,7 +2,7 @@
 Seed initial users into the database.
 Run this script once to create default admin and test users.
 """
-from app.core.database import SessionLocal, init_db
+from app.core.database import get_session_local, init_db
 from app.models.user import UserDB, UserRole
 from app.core.security import hash_password
 
@@ -10,6 +10,7 @@ def seed_users():
     """Create initial users if they don't exist"""
     init_db()  # Ensure tables are created
     
+    SessionLocal = get_session_local()
     db = SessionLocal()
     try:
         # Check if users already exist
