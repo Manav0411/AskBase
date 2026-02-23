@@ -59,6 +59,7 @@ class ConversationResponse(BaseModel):
     updated_at: datetime
     messages: Optional[List[MessageResponse]] = None
     document: Optional[DocumentResponse] = None
+    suggested_questions: Optional[List[str]] = []  # AI-generated suggested questions
 
     class Config:
         from_attributes = True
