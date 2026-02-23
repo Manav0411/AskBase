@@ -12,5 +12,7 @@ pypdf
 langchain-huggingface
 sentence-transformers
 sqlalchemy
+psycopg2-binary
 slowapi
 httpx
+gunicorn
