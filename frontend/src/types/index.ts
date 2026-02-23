@@ -39,6 +39,7 @@ export interface Conversation {
   updated_at: string
   messages?: Message[]
   document?: Document
+  suggested_questions?: string[]  // AI-generated suggested questions
 }
 
 export interface PaginatedResponse<T> {

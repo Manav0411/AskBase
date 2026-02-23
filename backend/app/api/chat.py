@@ -23,7 +23,7 @@ from app.models.conversation import (
 )
 from app.models.common import PaginatedResponse, create_pagination_meta
 from app.vector.store import retrieve, retrieve_first_chunks
-from app.llm.groq import generate_answer, LLMError
+from app.llm.groq import generate_answer, generate_document_summary, generate_suggested_questions, LLMError
 
 logger = logging.getLogger(__name__)
 limiter = Limiter(key_func=get_remote_address)
@@ -111,7 +111,48 @@ def create_conversation(
     db.commit()
     db.refresh(conversation)
     
-    return conversation
+    # Generate welcome message with document summary and suggested questions
+    suggested_questions = []
+    try:
+        # Get initial chunks from document for context
+        context_docs = retrieve_first_chunks(data.document_id, k=10)
+        context = "\n\n".join([doc.page_content for doc in context_docs])
+        
+        # Generate document summary
+        summary = generate_document_summary(context)
+        logger.info(f"Generated summary for conversation {conversation_id}")
+        
+        # Generate suggested questions
+        suggested_questions = generate_suggested_questions(context, document.original_filename)
+        logger.info(f"Generated {len(suggested_questions)} suggested questions")
+        
+        # Create welcome message with the summary
+        welcome_message = MessageDB(
+            conversation_id=conversation_id,
+            role="assistant",
+            content=summary,
+            timestamp=datetime.now(timezone.utc),
+            confidence_score=1.0
+        )
+        
+        db.add(welcome_message)
+        db.commit()
+        db.refresh(welcome_message)
+        
+        # Return conversation with welcome message and suggested questions
+        conversation_response = ConversationResponse.from_orm(conversation)
+        conversation_response.messages = [MessageResponse.from_orm(welcome_message)]
+        conversation_response.suggested_questions = suggested_questions
+        
+        return conversation_response
+        
+    except Exception as e:
+        logger.error(f"Error generating welcome content: {str(e)}")
+        # Return conversation without welcome message if generation fails
+        conversation_response = ConversationResponse.from_orm(conversation)
+        conversation_response.messages = []
+        conversation_response.suggested_questions = []
+        return conversation_response
 
 
 @router.get("/", response_model=PaginatedResponse[ConversationResponse])
@@ -179,6 +220,20 @@ def get_conversation(
         "messages": conversation.messages,
         "document": document
     }
+    
+    # Generate suggested questions if this is a new conversation (only has welcome message)
+    if len(conversation.messages) == 1:
+        try:
+            context_docs = retrieve_first_chunks(conversation.document_id, k=10)
+            context = "\n\n".join([doc.page_content for doc in context_docs])
+            suggested_questions = generate_suggested_questions(context, document.original_filename if document else "document")
+            response_dict["suggested_questions"] = suggested_questions
+            logger.info(f"Generated {len(suggested_questions)} suggested questions for conversation {conversation_id}")
+        except Exception as e:
+            logger.error(f"Error generating suggested questions: {str(e)}")
+            response_dict["suggested_questions"] = []
+    else:
+        response_dict["suggested_questions"] = []
     
     return ConversationResponse(**response_dict)
 

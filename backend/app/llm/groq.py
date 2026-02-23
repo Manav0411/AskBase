@@ -148,3 +148,163 @@ Confidence Guidelines:
     except Exception as e:
         logger.error(f"Unexpected error in generate_answer: {str(e)}")
         raise LLMError(f"Unexpected error: {type(e).__name__}")
+
+
+def generate_document_summary(context: str) -> str:
+    """
+    Generate a comprehensive summary/outline of a document based on initial excerpts.
+    
+    Args:
+        context: Text excerpts from the document
+    
+    Returns:
+        A formatted summary of the document
+    """
+    API_URL = "https://api.groq.com/openai/v1/chat/completions"
+    
+    headers = {
+        "Authorization": f"Bearer {settings.groq_api_key}",
+        "Content-Type": "application/json"
+    }
+    
+    system_message = {
+        "role": "system",
+        "content": """You are an AI assistant specializing in document analysis. Your task is to provide a clear, comprehensive overview of documents.
+
+Given excerpts from a document, create a well-structured summary that includes:
+
+**📄 Document Overview**
+Brief description of what this document contains and its purpose.
+
+**🔑 Key Topics**
+- Main subjects and themes covered
+- Important sections or categories
+
+**⚡ Important Highlights**
+- Critical policies, guidelines, or requirements
+- Key dates, numbers, or specifications
+- Notable rules or procedures
+
+**📋 Document Structure**
+How the content is organized and what sections are included.
+
+Be concise but comprehensive. Use markdown formatting with emojis for visual appeal."""
+    }
+    
+    user_message = {
+        "role": "user",
+        "content": f"""Please analyze these excerpts from a document and provide a comprehensive overview:
+
+===== DOCUMENT EXCERPTS =====
+{context}
+===== END OF EXCERPTS =====
+
+Provide a clear, structured summary of this document."""
+    }
+    
+    payload = {
+        "model": "llama-3.3-70b-versatile",
+        "messages": [system_message, user_message],
+        "temperature": 0.3,
+        "max_tokens": 1000
+    }
+    
+    try:
+        response = requests.post(API_URL, headers=headers, json=payload, timeout=30)
+        
+        if response.status_code == 200:
+            result = response.json()
+            if "choices" in result and len(result["choices"]) > 0:
+                summary = result["choices"][0]["message"]["content"].strip()
+                return summary
+            raise LLMError("No summary generated from API")
+        else:
+            logger.error(f"Groq API Error: {response.status_code}")
+            raise LLMError(f"API Error: {response.status_code}")
+            
+    except requests.exceptions.Timeout:
+        raise LLMError("Request timed out")
+    except LLMError:
+        raise
+    except Exception as e:
+        logger.error(f"Error generating summary: {str(e)}")
+        raise LLMError(f"Unexpected error: {type(e).__name__}")
+
+
+def generate_suggested_questions(context: str, document_name: str) -> List[str]:
+    """
+    Generate 4-5 relevant questions a user might want to ask about the document.
+    
+    Args:
+        context: Text excerpts from the document
+        document_name: Name of the document
+    
+    Returns:
+        List of suggested questions
+    """
+    API_URL = "https://api.groq.com/openai/v1/chat/completions"
+    
+    headers = {
+        "Authorization": f"Bearer {settings.groq_api_key}",
+        "Content-Type": "application/json"
+    }
+    
+    system_message = {
+        "role": "system",
+        "content": """You are an AI assistant that generates relevant questions about documents.
+
+Given excerpts from a document, generate 4-5 specific, insightful questions that users would likely want to ask.
+
+Requirements:
+- Questions should be specific to the document content
+- Use natural, conversational language
+- Mix different types: specific details, policies, procedures, implications
+- Make questions actionable and relevant
+- Return ONLY the questions, one per line, without numbering or bullets"""
+    }
+    
+    user_message = {
+        "role": "user",
+        "content": f"""Based on these excerpts from "{document_name}", generate 4-5 relevant questions users might ask:
+
+===== DOCUMENT EXCERPTS =====
+{context}
+===== END OF EXCERPTS =====
+
+Generate the questions:"""
+    }
+    
+    payload = {
+        "model": "llama-3.3-70b-versatile",
+        "messages": [system_message, user_message],
+        "temperature": 0.7,
+        "max_tokens": 300
+    }
+    
+    try:
+        response = requests.post(API_URL, headers=headers, json=payload, timeout=20)
+        
+        if response.status_code == 200:
+            result = response.json()
+            if "choices" in result and len(result["choices"]) > 0:
+                questions_text = result["choices"][0]["message"]["content"].strip()
+                # Split by newlines and clean up
+                questions = [
+                    q.strip().lstrip('0123456789.-) ').strip()
+                    for q in questions_text.split('\n')
+                    if q.strip() and len(q.strip()) > 10
+                ]
+                return questions[:5]  # Return max 5 questions
+            raise LLMError("No questions generated from API")
+        else:
+            logger.error(f"Groq API Error: {response.status_code}")
+            return []  # Return empty list on error
+            
+    except requests.exceptions.Timeout:
+        logger.warning("Timeout generating questions")
+        return []
+    except LLMError:
+        return []
+    except Exception as e:
+        logger.error(f"Error generating questions: {str(e)}")
+        return []  # Return empty list on error

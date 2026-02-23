@@ -16,6 +16,8 @@ import {
   Skeleton,
   Alert,
   CircularProgress,
+  Stack,
+  Chip,
 } from '@mui/material'
 import {
   SendOutlined,
@@ -71,6 +73,18 @@ export default function ChatPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [conversation?.messages])
+
+  useEffect(() => {
+    if (conversation) {
+      console.log('Conversation data:', {
+        id: conversation.id,
+        messages_count: conversation.messages?.length,
+        suggested_questions: conversation.suggested_questions,
+        has_suggested: !!conversation.suggested_questions,
+        suggestions_count: conversation.suggested_questions?.length || 0
+      })
+    }
+  }, [conversation])
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault()
@@ -352,6 +366,79 @@ export default function ChatPage() {
                     AI is typing
                   </Typography>
                   <CircularProgress size={16} sx={{ ml: 1 }} />
+                </Box>
+              )}
+
+              {/* Suggested Questions */}
+              {conversation?.suggested_questions && conversation.suggested_questions.length > 0 && conversation.messages && conversation.messages.length <= 1 && (
+                <Box 
+                  sx={{ 
+                    mt: 3, 
+                    mb: 2,
+                    p: 2.5,
+                    backgroundColor: 'rgba(139, 92, 246, 0.05)',
+                    border: '1px solid rgba(139, 92, 246, 0.2)',
+                    borderRadius: 2,
+                    animation: 'fadeIn 0.5s ease-out',
+                    '@keyframes fadeIn': {
+                      from: {
+                        opacity: 0,
+                        transform: 'translateY(-10px)',
+                      },
+                      to: {
+                        opacity: 1,
+                        transform: 'translateY(0)',
+                      },
+                    },
+                  }}
+                >
+                  <Typography 
+                    variant="subtitle2" 
+                    sx={{ 
+                      mb: 1.5, 
+                      fontWeight: 600,
+                      color: '#8b5cf6',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 0.5,
+                    }}
+                  >
+                    💡 Suggested Questions
+                  </Typography>
+                  <Stack spacing={1}>
+                    {conversation.suggested_questions.map((question, index) => (
+                      <Chip
+                        key={index}
+                        label={question}
+                        onClick={() => {
+                          setMessageInput(question)
+                          // Auto-submit the question
+                          sendMessageMutation.mutate(question)
+                        }}
+                        disabled={sendMessageMutation.isPending}
+                        sx={{
+                          justifyContent: 'flex-start',
+                          height: 'auto',
+                          py: 1.5,
+                          px: 2,
+                          '& .MuiChip-label': {
+                            whiteSpace: 'normal',
+                            textAlign: 'left',
+                            padding: 0,
+                          },
+                          cursor: 'pointer',
+                          backgroundColor: 'rgba(20, 20, 20, 0.5)',
+                          border: '1px solid #2a2a2a',
+                          '&:hover': {
+                            backgroundColor: 'rgba(139, 92, 246, 0.15)',
+                            borderColor: '#8b5cf6',
+                            transform: 'translateX(4px)',
+                            transition: 'all 0.2s ease',
+                          },
+                        }}
+                      />
+                    ))}
+                  </Stack>
                 </Box>
               )}
 
