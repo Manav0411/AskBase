@@ -50,13 +50,6 @@ services:
         value: 0.3
       - key: LLM_MAX_TOKENS
         value: 1500
-    
-    # Disk storage for uploads and vector store
-    # Note: Free tier includes 1GB. Additional storage costs $0.25/GB/month
-    disk:
-      name: askbase-storage
-      mountPath: /opt/render/project/src/backend
-      sizeGB: 1
 
 # PostgreSQL Database
 databases:
