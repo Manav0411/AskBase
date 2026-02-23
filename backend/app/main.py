@@ -44,9 +44,7 @@ def startup_event():
     logger.info("Starting application...")
     init_db()
     logger.info("Database initialized successfully")
-    
-    load_vector_store()
-    logger.info("Vector store initialization complete")
+    # Vector store will be loaded lazily on first use
     logger.info("Application startup complete")
 
 @app.get("/health")
