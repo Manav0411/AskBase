@@ -2,10 +2,6 @@ from typing import List, Dict, Optional
 import os
 import logging
 from datetime import datetime
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.vectorstores import FAISS
-from langchain_core.documents import Document as LC_Document
-from langchain_huggingface import HuggingFaceEmbeddings
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -28,6 +24,8 @@ cache_metadata = {
 
 def get_embedding_model():
     """Lazy initialization of embedding model"""
+    from langchain_huggingface import HuggingFaceEmbeddings
+    
     global embedding_model
     if embedding_model is None:
         logger.info(f"Loading embedding model {settings.embedding_model}... (this may take a moment on first use)")
@@ -61,6 +59,8 @@ def _update_cache_metadata():
 
 def load_vector_store():
     """Load FAISS vector store from disk if it exists (with caching)"""
+    from langchain_community.vectorstores import FAISS
+    
     global vector_store, cache_metadata
     
     if os.path.exists(VECTOR_STORE_PATH):
@@ -93,6 +93,10 @@ def save_vector_store():
 
 def ingest_text(document_id: str, text: str):
     """Ingest text into vector store with chunking and embedding"""
+    from langchain_text_splitters import RecursiveCharacterTextSplitter
+    from langchain_community.vectorstores import FAISS
+    from langchain_core.documents import Document as LC_Document
+    
     global vector_store
     
     embeddings = get_embedding_model()
