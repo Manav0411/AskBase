@@ -18,10 +18,12 @@ class Settings(BaseSettings):
     
     max_file_size_mb: int = 10
     
-    chunk_size: int = 1200
-    chunk_overlap: int = 200
+    # Optimized for free tier deployment
+    chunk_size: int = 500
+    chunk_overlap: int = 50
     
-    embedding_model: str = "BAAI/bge-small-en-v1.5"
+    # Lightweight model optimized for free tier (80MB)
+    embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
     
     use_mmr: bool = True
     mmr_diversity: float = 0.3

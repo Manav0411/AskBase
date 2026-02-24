@@ -23,14 +23,22 @@ cache_metadata = {
 }
 
 def get_embedding_model():
-    """Lazy initialization of embedding model"""
+    """Lazy initialization of embedding model - optimized for free tier"""
     from langchain_huggingface import HuggingFaceEmbeddings
     
     global embedding_model
     if embedding_model is None:
-        logger.info(f"Loading embedding model {settings.embedding_model}... (this may take a moment on first use)")
-        embedding_model = HuggingFaceEmbeddings(model_name=settings.embedding_model)
-        logger.info(f"Embedding model {settings.embedding_model} loaded successfully")
+        logger.info(f"Loading embedding model: {settings.embedding_model}")
+        embedding_model = HuggingFaceEmbeddings(
+            model_name=settings.embedding_model,
+            model_kwargs={'device': 'cpu'},
+            encode_kwargs={
+                'normalize_embeddings': True,
+                'batch_size': 16,  # Smaller batches for limited RAM
+                'show_progress_bar': False
+            }
+        )
+        logger.info("Embedding model loaded and cached successfully")
     return embedding_model
 
 vector_store = None
@@ -92,22 +100,31 @@ def save_vector_store():
             logger.error(f"Failed to save vector store: {str(e)}")
 
 def ingest_text(document_id: str, text: str):
-    """Ingest text into vector store with chunking and embedding"""
+    """Ingest text into vector store - optimized for free tier"""
     from langchain_text_splitters import RecursiveCharacterTextSplitter
     from langchain_community.vectorstores import FAISS
     from langchain_core.documents import Document as LC_Document
     
     global vector_store
     
+    logger.info(f"Processing document {document_id}...")
+    
     embeddings = get_embedding_model()
 
+    # Use smaller chunks for faster processing on free tier
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=settings.chunk_size,
-        chunk_overlap=settings.chunk_overlap
+        chunk_overlap=settings.chunk_overlap,
+        length_function=len
     )
 
     chunks = text_splitter.split_text(text)
     logger.info(f"Split document {document_id} into {len(chunks)} chunks")
+    
+    # Limit chunks to prevent worker timeouts on free tier
+    if len(chunks) > 100:
+        logger.warning(f"Document has {len(chunks)} chunks, limiting to 100 for free tier")
+        chunks = chunks[:100]
 
     docs = [
         LC_Document(
@@ -117,13 +134,27 @@ def ingest_text(document_id: str, text: str):
         for chunk in chunks
     ]
 
+    # Process in batches to avoid memory issues
+    batch_size = 10
     if vector_store is None:
-        vector_store = FAISS.from_documents(docs, embeddings)
-        logger.info(f"Created new vector store with {len(chunks)} chunks")
+        # Create new vector store with first batch
+        first_batch = docs[:batch_size]
+        vector_store = FAISS.from_documents(first_batch, embeddings)
+        logger.info(f"Created new vector store")
+        remaining_docs = docs[batch_size:]
     else:
-        vector_store.add_documents(docs)
-        logger.info(f"Added {len(chunks)} chunks to existing vector store")
+        remaining_docs = docs
     
+    # Add remaining documents in batches
+    if remaining_docs:
+        total_batches = (len(remaining_docs) + batch_size - 1) // batch_size
+        for i in range(0, len(remaining_docs), batch_size):
+            batch = remaining_docs[i:i+batch_size]
+            vector_store.add_documents(batch)
+            batch_num = i // batch_size + 1
+            logger.info(f"Processed batch {batch_num}/{total_batches} ({len(batch)} chunks)")
+    
+    logger.info(f"Document {document_id} fully processed: {len(chunks)} total chunks")
     save_vector_store()
     _update_cache_metadata()
 
@@ -182,6 +213,8 @@ def delete_document_vectors(document_id: str):
     Delete all vectors associated with a document.
     Note: FAISS doesn't support deletion by metadata, so we rebuild the index without the document.
     """
+    from langchain_community.vectorstores import FAISS
+    
     global vector_store
     
     if vector_store is None:
