@@ -163,10 +163,20 @@ def save_vector_store():
 
 def ingest_text(document_id: str, text: str):
     """Ingest text into vector store - optimized with Cohere API (free tier)"""
+    logger.info(f"[DEBUG] ingest_text called for document {document_id}")
+    logger.info(f"[DEBUG] Starting imports...")
+    
     from langchain_text_splitters import RecursiveCharacterTextSplitter
+    logger.info(f"[DEBUG] Imported RecursiveCharacterTextSplitter")
+    
     from langchain_community.vectorstores import FAISS
+    logger.info(f"[DEBUG] Imported FAISS")
+    
     from langchain_core.documents import Document as LC_Document
+    logger.info(f"[DEBUG] Imported Document")
+    
     from langchain_core.embeddings import Embeddings
+    logger.info(f"[DEBUG] Imported Embeddings")
     
     global vector_store
     
