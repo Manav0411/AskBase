@@ -14,8 +14,6 @@
 - Engineer: `engineer@example.com` / `engineer123`
 - Intern: `intern@example.com` / `intern123`
 
-> **Note**: Free tier deployment - vector embeddings reset on backend restarts, but documents persist in PostgreSQL database.
-
 ## 🎯 Use Case
 
 AskBase solves the problem of finding information scattered across company documents. Instead of searching through hundreds of pages of policies, handbooks, or procedures, employees can simply ask questions and get AI-powered answers instantly.
@@ -364,14 +362,6 @@ Result: Only John Doe and admins can access this document
 - **Backend**: https://askbase-backend.onrender.com (Render)
 - **Database**: PostgreSQL (Render managed)
 
-**Free Tier Optimizations:**
-- ✅ Lightweight embedding model (80MB vs 400MB+)
-- ✅ Optimized chunk sizes (500 vs 1200)
-- ✅ Batch processing for embeddings
-- ✅ 5-minute worker timeout
-- ✅ bcrypt 4.x for compatibility
-- ⚠️ Vector store resets on backend restarts (ephemeral filesystem)
-- ✅ Documents persist in PostgreSQL
 
 ### Production Deployment Guide
 
