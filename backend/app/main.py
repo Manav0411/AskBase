@@ -49,17 +49,6 @@ async def startup_event():
 def root():
     return {"message": "AskBase API is running", "status": "ok"}
 
-@app.get("/config-check")
-def config_check():
-    """Diagnostic endpoint to check environment configuration"""
-    return {
-        "cohere_api_key_set": bool(settings.cohere_api_key),
-        "cohere_api_key_length": len(settings.cohere_api_key) if settings.cohere_api_key else 0,
-        "use_cohere_embeddings": settings.use_cohere_embeddings,
-        "embedding_model": settings.embedding_model,
-        "has_groq_key": bool(settings.groq_api_key)
-    }
-
 @app.get("/seed-admin")
 def seed_admin_user(force: bool = False):
     """

@@ -156,13 +156,9 @@ GROQ_API_KEY=your-groq-api-key
 
 # Cohere API (Embeddings - Free tier: 100 calls/min)
 COHERE_API_KEY=your-cohere-api-key
-USE_COHERE_EMBEDDINGS=true
 
 # CORS
 CORS_ORIGINS=http://localhost:5173
-
-# Embeddings (only used if USE_COHERE_EMBEDDINGS=false)
-EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
 
 # RAG Configuration (optimized for free tier)
 CHUNK_SIZE=500
@@ -396,7 +392,6 @@ Result: Only John Doe and admins can access this document
    JWT_ALGORITHM=HS256
    GROQ_API_KEY=<your-groq-api-key>
    COHERE_API_KEY=<your-cohere-api-key>
-   USE_COHERE_EMBEDDINGS=true
    DATABASE_URL=<postgres-internal-url-from-render>
    CORS_ORIGINS=https://your-frontend-url.vercel.app
    CHUNK_SIZE=500
@@ -607,7 +602,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [Cohere](https://cohere.com/) - Fast, reliable embeddings API (free tier)
 - [FAISS](https://github.com/facebookresearch/faiss) - Vector similarity search by Meta AI
 - [Material-UI](https://mui.com/) - React component library
-- [HuggingFace](https://huggingface.co/) - Embedding models and AI community
 
 ---
 

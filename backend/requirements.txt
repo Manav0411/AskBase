@@ -10,8 +10,6 @@ langchain
 langchain-community
 faiss-cpu
 pypdf
-langchain-huggingface
-sentence-transformers
 sqlalchemy
 psycopg2-binary
 slowapi
