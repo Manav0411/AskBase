@@ -50,10 +50,10 @@ def root():
     return {"message": "AskBase API is running", "status": "ok"}
 
 @app.get("/seed-admin")
-def seed_admin_user():
+def seed_admin_user(force: bool = False):
     """
-    One-time endpoint to create default admin user.
-    Visit this URL once after deployment to create the admin account.
+    Endpoint to create default demo users.
+    Visit /seed-admin to create users or /seed-admin?force=true to recreate them.
     """
     from app.core.database import get_session_local, init_db
     from app.models.user import UserDB, UserRole
@@ -66,38 +66,72 @@ def seed_admin_user():
         
         # Check if users already exist
         existing_users = db.query(UserDB).count()
-        if existing_users > 0:
+        
+        if existing_users > 0 and not force:
             db.close()
             return {
                 "status": "skipped",
                 "message": f"Database already has {existing_users} user(s)",
-                "note": "Admin user may already exist"
+                "note": "Use /seed-admin?force=true to recreate all users"
             }
         
-        # Create admin user
-        admin = UserDB(
-            email="admin@company.com",
-            hashed_password=hash_password("admin123"),
-            role=UserRole.admin,
-            is_active=1
-        )
-        db.add(admin)
+        # If force=true, delete existing users
+        if force and existing_users > 0:
+            db.query(UserDB).delete()
+            db.commit()
+        
+        # Create default users for each role
+        default_users = [
+            {
+                "email": "admin@example.com",
+                "password": "admin123",
+                "role": UserRole.admin
+            },
+            {
+                "email": "hr@example.com",
+                "password": "hr123",
+                "role": UserRole.hr
+            },
+            {
+                "email": "engineer@example.com",
+                "password": "engineer123",
+                "role": UserRole.engineer
+            },
+            {
+                "email": "intern@example.com",
+                "password": "intern123",
+                "role": UserRole.intern
+            }
+        ]
+        
+        created_users = []
+        for user_data in default_users:
+            user = UserDB(
+                email=user_data["email"],
+                hashed_password=hash_password(user_data["password"]),
+                role=user_data["role"],
+                is_active=1
+            )
+            db.add(user)
+            created_users.append({
+                "email": user_data["email"],
+                "password": user_data["password"],
+                "role": user_data["role"].value
+            })
+        
         db.commit()
         db.close()
         
         return {
             "status": "success",
-            "message": "Admin user created successfully!",
-            "credentials": {
-                "email": "admin@company.com",
-                "password": "admin123",
-                "note": "Please change this password after first login"
-            }
+            "message": f"Created {len(created_users)} demo users successfully!",
+            "credentials": created_users,
+            "note": "Please change these passwords after first login"
         }
     except Exception as e:
         return {
             "status": "error",
-            "message": f"Failed to create admin user: {str(e)}"
+            "message": f"Failed to create users: {str(e)}"
         }
 
 @app.get("/health")
