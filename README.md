@@ -2,6 +2,20 @@
 
 **AskBase** is an AI-powered internal knowledge base designed for companies to manage and query their organizational documents. Administrators upload company policies, handbooks, procedures, and other critical documents, then grant access to specific employees or roles. Employees can then ask natural language questions and get instant, accurate answers powered by RAG (Retrieval Augmented Generation) technology.
 
+## 🌐 Live Demo
+
+- **Frontend**: https://ask-base-kappa.vercel.app
+- **Backend API**: https://askbase-backend.onrender.com
+- **API Docs**: https://askbase-backend.onrender.com/docs
+
+**Demo Credentials:**
+- Admin: `admin@example.com` / `admin123`
+- HR: `hr@example.com` / `hr123`
+- Engineer: `engineer@example.com` / `engineer123`
+- Intern: `intern@example.com` / `intern123`
+
+> **Note**: Free tier deployment - vector embeddings reset on backend restarts, but documents persist in PostgreSQL database.
+
 ## 🎯 Use Case
 
 AskBase solves the problem of finding information scattered across company documents. Instead of searching through hundreds of pages of policies, handbooks, or procedures, employees can simply ask questions and get AI-powered answers instantly.
@@ -36,12 +50,13 @@ AskBase solves the problem of finding information scattered across company docum
 
 ### Backend
 - **FastAPI** - High-performance Python web framework
-- **SQLAlchemy** - SQL database ORM
+- **SQLAlchemy** - SQL database ORM with PostgreSQL
 - **FAISS** - Facebook AI Similarity Search for vector storage
 - **LangChain** - Framework for LLM applications
-- **Groq API** - Fast LLM inference
-- **HuggingFace** - Embedding models (BAAI/bge-small-en-v1.5)
+- **Groq API** - Fast LLM inference (llama-3.3-70b-versatile)
+- **HuggingFace** - Embedding models (sentence-transformers/all-MiniLM-L6-v2)
 - **JWT** - JSON Web Tokens for authentication
+- **Gunicorn** - Production WSGI server
 
 ### Frontend
 - **React 19** - Modern React with TypeScript
@@ -50,6 +65,12 @@ AskBase solves the problem of finding information scattered across company docum
 - **TanStack Query** - Data fetching and caching
 - **Zustand** - State management
 - **Vite** - Fast build tool
+
+### Deployment
+- **Frontend**: Vercel (free tier)
+- **Backend**: Render (free tier)
+- **Database**: PostgreSQL (Render managed)
+- **Vector Store**: FAISS (ephemeral on free tier)
 
 ## 📋 Prerequisites
 
@@ -137,12 +158,12 @@ GROQ_API_KEY=your-groq-api-key
 # CORS
 CORS_ORIGINS=http://localhost:5173
 
-# Embeddings
-EMBEDDING_MODEL=BAAI/bge-small-en-v1.5
+# Embeddings (optimized for free tier deployment)
+EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
 
-# RAG Configuration
-CHUNK_SIZE=1200
-CHUNK_OVERLAP=200
+# RAG Configuration (optimized for free tier)
+CHUNK_SIZE=500
+CHUNK_OVERLAP=50
 RETRIEVAL_K=6
 USE_MMR=true
 MMR_DIVERSITY=0.3
@@ -173,15 +194,20 @@ VITE_API_URL=http://localhost:8000
 
 ### Default Test Users
 
-The system comes with seeded users for testing:
+The system comes with seeded users for testing (create via `/seed-admin` endpoint):
 
 | Email | Password | Role | Capabilities |
 |-------|----------|------|-------------|
 | admin@example.com | admin123 | admin | Upload docs, grant access, view all |
 | hr@example.com | hr123 | hr | View accessible docs, ask questions |
 | engineer@example.com | engineer123 | engineer | View accessible docs, ask questions |
+| intern@example.com | intern123 | intern | View accessible docs, ask questions |
 
 > **Note:** Change these passwords in production!
+
+To create/recreate users in production:
+- Visit: `https://askbase-backend.onrender.com/seed-admin?force=true`
+- Or locally: `http://localhost:8000/seed-admin`
 
 ## 📖 API Documentation
 
@@ -331,72 +357,192 @@ Result: Only John Doe and admins can access this document
 
 ## 🚀 Deployment
 
+### Current Deployment (Free Tier)
+
+**Live URLs:**
+- **Frontend**: https://ask-base-kappa.vercel.app (Vercel)
+- **Backend**: https://askbase-backend.onrender.com (Render)
+- **Database**: PostgreSQL (Render managed)
+
+**Free Tier Optimizations:**
+- ✅ Lightweight embedding model (80MB vs 400MB+)
+- ✅ Optimized chunk sizes (500 vs 1200)
+- ✅ Batch processing for embeddings
+- ✅ 5-minute worker timeout
+- ✅ bcrypt 4.x for compatibility
+- ⚠️ Vector store resets on backend restarts (ephemeral filesystem)
+- ✅ Documents persist in PostgreSQL
+
+### Production Deployment Guide
+
+#### Backend Deployment (Render)
+
+1. **Create Render Account** - Sign up at https://render.com
+
+2. **Create PostgreSQL Database**
+   - Dashboard → New → PostgreSQL
+   - Free tier selected
+   - Note the Internal Database URL
+
+3. **Create Web Service**
+   - Dashboard → New → Web Service
+   - Connect your GitHub repository
+   - Settings:
+     - **Root Directory**: `backend`
+     - **Build Command**: `pip install -r requirements.txt`
+     - **Start Command**: `cd backend && gunicorn app.main:app --workers 1 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT`
+     - **Python Version**: Set environment variable `PYTHON_VERSION=3.11.9`
+
+4. **Environment Variables** (Render Dashboard → Environment)
+   ```env
+   APP_NAME=AskBase
+   ENV=production
+   JWT_SECRET=<generate-secure-random-string>
+   JWT_ALGORITHM=HS256
+   GROQ_API_KEY=<your-groq-api-key>
+   DATABASE_URL=<postgres-internal-url-from-render>
+   CORS_ORIGINS=https://your-frontend-url.vercel.app
+   EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
+   CHUNK_SIZE=500
+   CHUNK_OVERLAP=50
+   PYTHON_VERSION=3.11.9
+   ```
+
+5. **Deploy**
+   - Render auto-deploys on git push
+   - Monitor logs in Render dashboard
+
+6. **Create Users**
+   - Visit: `https://your-backend.onrender.com/seed-admin?force=true`
+
+#### Frontend Deployment (Vercel)
+
+1. **Create Vercel Account** - Sign up at https://vercel.com
+
+2. **Import Project**
+   - New Project → Import Git Repository
+   - Select your repository
+   - Framework Preset: Vite
+   - **Root Directory**: `frontend`
+
+3. **Environment Variables**
+   ```env
+   VITE_API_URL=https://your-backend.onrender.com
+   ```
+
+4. **Build Settings** (automatically detected)
+   - **Build Command**: `npm install && npm run build`
+   - **Output Directory**: `dist`
+
+5. **Deploy**
+   - Click Deploy
+   - Vercel auto-deploys on git push to main
+
+#### DNS & Custom Domain (Optional)
+
+1. **Vercel**: Settings → Domains → Add your domain
+2. **Render**: Settings → Custom Domain → Add your API domain
+
 ### Production Considerations
 
-#### Backend Deployment
+#### Security
+- ✅ Use strong JWT secrets (32+ characters, randomly generated)
+- ✅ Enable HTTPS (Render/Vercel provide this automatically)
+- ✅ Configure proper CORS origins
+- ✅ Change default user passwords immediately
+- ✅ Regular security audits
 
-1. **Database Setup**
-   ```bash
-   # Use PostgreSQL for production
-   DATABASE_URL=postgresql://user:password@localhost:5432/askbase_prod
-   ```
+#### Scaling Beyond Free Tier
 
-2. **Environment Variables**
-   - Generate secure `JWT_SECRET` (32+ characters)
-   - Set `ENV=production`
-   - Configure proper `CORS_ORIGINS` for your domain
-   - Set up production Groq API key
+**Backend (Render):**
+- Upgrade to paid plan for:
+  - Persistent disk (vector store survives restarts)
+  - More CPU/RAM (faster processing)
+  - Multiple workers
+  - Background jobs
 
-3. **Server Setup**
-   ```bash
-   # Install production dependencies
-   pip install -r requirements.txt
-   
-   # Run with Gunicorn (recommended for production)
-   gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
-   ```
+**Database:**
+- Monitor connection limits (free tier: 20 connections)
+- Consider dedicated database for production scale
+- Enable automated backups (available on paid plans)
 
-4. **Reverse Proxy (Nginx)**
-   ```nginx
-   server {
-       listen 80;
-       server_name your-domain.com;
-       
-       location / {
-           proxy_pass http://localhost:8000;
-           proxy_set_header Host $host;
-           proxy_set_header X-Real-IP $remote_addr;
-       }
-   }
-   ```
+**Vector Store:**
+- For production: Use managed vector database
+  - Pinecone (easy setup, generous free tier)
+  - Supabase (PostgreSQL with pgvector)
+  - Weaviate (self-hosted or cloud)
 
-5. **Enable HTTPS** with Let's Encrypt or your organization's SSL certificate
+**Alternative: Self-Hosted**
+- Deploy on your own infrastructure
+- Use dedicated server for vector store
+- Implement Redis for caching
+- Set up Celery for background tasks
 
-#### Frontend Deployment
+#### Free Tier Limitations
 
+**Current Setup (Render Free + Vercel Free):**
+- ✅ **Cost**: $0/month (completely free)
+- ⚠️ **Vector Store**: Resets on backend restarts/redeploys
+- ✅ **Documents**: Persist in PostgreSQL (survives restarts)
+- ⚠️ **Performance**: Limited CPU/RAM (512MB)
+- ✅ **Uptime**: Good for demo/testing
+- ⚠️ **Cold Starts**: Backend sleeps after 15 min inactivity
+- ✅ **Re-upload**: Documents need re-upload after restarts for embeddings
+
+**Workarounds:**
+1. Keep backend warm with uptime monitoring service
+2. Re-upload documents as needed (they're saved in DB)
+3. For production, upgrade to paid tier ($7-25/month)
+
+#### Monitoring
+
+**Render Logs:**
 ```bash
-cd frontend
-
-# Build for production
-npm run build
-
-# Deploy the 'dist' folder to:
-# - Your organization's web server
-# - Static hosting (S3, Azure Blob Storage, etc.)
-# - CDN service
+# View logs in Render dashboard
+# Or use Render CLI
+render logs -s your-service-name
 ```
 
-Update frontend `.env` for production:
-```env
-VITE_API_URL=https://api.your-company.com
-```
+**Health Checks:**
+- Backend health: `https://your-backend.onrender.com/health`
+- API docs: `https://your-backend.onrender.com/docs`
 
-### Maintenance
+#### Backup Strategy
 
-- **Database Backups** - Set up regular automated backups
-- **Log Monitoring** - Monitor `askbase.log` for errors
-- **Vector Store Backups** - Backup the `vector_store/` directory regularly
-- **Update Dependencies** - Keep packages up to date for security
+**Database Backups:**
+- Render PostgreSQL: Automatic backups on paid plans
+- Manual: Use `pg_dump` command
+- Store backups in S3 or cloud storage
+
+**Document Backups:**
+- Backend files in `uploads/` directory
+- On free tier: Download before restarts
+- Production: Use cloud storage (S3, Azure Blob)
+
+**Vector Store Backups:**
+- `vector_store/faiss_index` directory
+- Not needed if using managed vector DB
+- Can regenerate from documents if lost
+
+#### Maintenance
+
+**Regular Tasks:**
+- Monitor error logs weekly
+- Review user activity and access patterns
+- Update dependencies monthly
+- Test backups and restore procedures
+- Monitor API usage and rate limits
+
+**Scaling Checklist:**
+- [ ] Move to paid hosting tiers
+- [ ] Implement Redis caching
+- [ ] Add Celery for async tasks
+- [ ] Use managed vector database
+- [ ] Enable CDN for frontend assets
+- [ ] Set up monitoring (DataDog, New Relic, etc.)
+- [ ] Implement proper logging infrastructure
+- [ ] Add automated tests
+- [ ] Set up CI/CD pipelines
 
 ## 💡 Common Use Cases
 
