@@ -1,6 +1,7 @@
 from typing import List, Dict, Optional
 import os
 import logging
+import numpy as np
 from datetime import datetime
 from app.core.config import settings
 
@@ -12,6 +13,7 @@ VECTOR_STORE_PATH = os.path.join(VECTOR_STORE_DIR, "faiss_index")
 os.makedirs(VECTOR_STORE_DIR, exist_ok=True)
 
 embedding_model = None
+cohere_client = None
 
 cache_metadata = {
     "loaded_at": None,
@@ -22,8 +24,43 @@ cache_metadata = {
     "cache_hits": 0
 }
 
+def get_cohere_client():
+    """Lazy initialization of Cohere client"""
+    import cohere
+    
+    global cohere_client
+    if cohere_client is None:
+        if not settings.cohere_api_key:
+            raise ValueError("COHERE_API_KEY environment variable not set")
+        logger.info("Initializing Cohere client")
+        cohere_client = cohere.Client(settings.cohere_api_key)
+        logger.info("Cohere client initialized successfully")
+    return cohere_client
+
+def generate_cohere_embeddings(texts: List[str]) -> List[List[float]]:
+    """Generate embeddings using Cohere API (free tier: 100 calls/min)"""
+    client = get_cohere_client()
+    
+    # Cohere supports up to 96 texts per request
+    batch_size = 96
+    all_embeddings = []
+    
+    for i in range(0, len(texts), batch_size):
+        batch = texts[i:i+batch_size]
+        logger.info(f"Generating embeddings for batch {i//batch_size + 1} ({len(batch)} texts)")
+        
+        response = client.embed(
+            texts=batch,
+            model="embed-english-light-v3.0",  # Free tier model
+            input_type="search_document"  # For document indexing
+        )
+        
+        all_embeddings.extend(response.embeddings)
+    
+    return all_embeddings
+
 def get_embedding_model():
-    """Lazy initialization of embedding model - optimized for free tier"""
+    """Lazy initialization of embedding model - optimized for free tier (fallback only)"""
     from langchain_huggingface import HuggingFaceEmbeddings
     
     global embedding_model
@@ -73,7 +110,32 @@ def load_vector_store():
     
     if os.path.exists(VECTOR_STORE_PATH):
         try:
-            embeddings = get_embedding_model()
+            # Use appropriate embedding method based on configuration
+            if settings.use_cohere_embeddings and settings.cohere_api_key:
+                # For Cohere, we need a wrapper that implements the Embeddings interface
+                from langchain_core.embeddings import Embeddings
+                
+                class CohereEmbeddingsWrapper(Embeddings):
+                    """Wrapper to make Cohere embeddings compatible with LangChain"""
+                    
+                    def embed_documents(self, texts: List[str]) -> List[List[float]]:
+                        return generate_cohere_embeddings(texts)
+                    
+                    def embed_query(self, text: str) -> List[float]:
+                        client = get_cohere_client()
+                        response = client.embed(
+                            texts=[text],
+                            model="embed-english-light-v3.0",
+                            input_type="search_query"  # For search queries
+                        )
+                        return response.embeddings[0]
+                
+                embeddings = CohereEmbeddingsWrapper()
+                logger.info("Using Cohere embeddings for vector store")
+            else:
+                embeddings = get_embedding_model()
+                logger.info("Using local embeddings for vector store")
+            
             vector_store = FAISS.load_local(
                 VECTOR_STORE_PATH, 
                 embeddings,
@@ -100,18 +162,38 @@ def save_vector_store():
             logger.error(f"Failed to save vector store: {str(e)}")
 
 def ingest_text(document_id: str, text: str):
-    """Ingest text into vector store - optimized for free tier"""
+    """Ingest text into vector store - optimized with Cohere API (free tier)"""
     from langchain_text_splitters import RecursiveCharacterTextSplitter
     from langchain_community.vectorstores import FAISS
     from langchain_core.documents import Document as LC_Document
+    from langchain_core.embeddings import Embeddings
     
     global vector_store
     
-    logger.info(f"Processing document {document_id}...")
+    logger.info(f"Processing document {document_id} with {'Cohere API' if settings.use_cohere_embeddings else 'local model'}...")
     
-    embeddings = get_embedding_model()
+    # Get embeddings interface
+    if settings.use_cohere_embeddings and settings.cohere_api_key:
+        class CohereEmbeddingsWrapper(Embeddings):
+            """Wrapper to make Cohere embeddings compatible with LangChain"""
+            
+            def embed_documents(self, texts: List[str]) -> List[List[float]]:
+                return generate_cohere_embeddings(texts)
+            
+            def embed_query(self, text: str) -> List[float]:
+                client = get_cohere_client()
+                response = client.embed(
+                    texts=[text],
+                    model="embed-english-light-v3.0",
+                    input_type="search_query"
+                )
+                return response.embeddings[0]
+        
+        embeddings = CohereEmbeddingsWrapper()
+    else:
+        embeddings = get_embedding_model()
 
-    # Use smaller chunks for faster processing on free tier
+    # Use smaller chunks for faster processing
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=settings.chunk_size,
         chunk_overlap=settings.chunk_overlap,
@@ -121,9 +203,10 @@ def ingest_text(document_id: str, text: str):
     chunks = text_splitter.split_text(text)
     logger.info(f"Split document {document_id} into {len(chunks)} chunks")
     
-    # Limit chunks to prevent worker timeouts on free tier
+    # Limit chunks to prevent excessive API calls (Cohere free tier: 100 calls/min)
+    # With Cohere's batch size of 96, we can process 100 chunks in ~2 API calls
     if len(chunks) > 100:
-        logger.warning(f"Document has {len(chunks)} chunks, limiting to 100 for free tier")
+        logger.warning(f"Document has {len(chunks)} chunks, limiting to 100")
         chunks = chunks[:100]
 
     docs = [
@@ -134,25 +217,16 @@ def ingest_text(document_id: str, text: str):
         for chunk in chunks
     ]
 
-    # Process in batches to avoid memory issues
-    batch_size = 10
+    # With Cohere, we can process all documents at once (up to 96 per API call)
+    # The embeddings wrapper handles batching automatically
     if vector_store is None:
-        # Create new vector store with first batch
-        first_batch = docs[:batch_size]
-        vector_store = FAISS.from_documents(first_batch, embeddings)
-        logger.info(f"Created new vector store")
-        remaining_docs = docs[batch_size:]
+        # Create new vector store
+        vector_store = FAISS.from_documents(docs, embeddings)
+        logger.info(f"Created new vector store with {len(docs)} chunks")
     else:
-        remaining_docs = docs
-    
-    # Add remaining documents in batches
-    if remaining_docs:
-        total_batches = (len(remaining_docs) + batch_size - 1) // batch_size
-        for i in range(0, len(remaining_docs), batch_size):
-            batch = remaining_docs[i:i+batch_size]
-            vector_store.add_documents(batch)
-            batch_num = i // batch_size + 1
-            logger.info(f"Processed batch {batch_num}/{total_batches} ({len(batch)} chunks)")
+        # Add documents to existing vector store
+        vector_store.add_documents(docs)
+        logger.info(f"Added {len(docs)} chunks to existing vector store")
     
     logger.info(f"Document {document_id} fully processed: {len(chunks)} total chunks")
     save_vector_store()
@@ -214,6 +288,7 @@ def delete_document_vectors(document_id: str):
     Note: FAISS doesn't support deletion by metadata, so we rebuild the index without the document.
     """
     from langchain_community.vectorstores import FAISS
+    from langchain_core.embeddings import Embeddings
     
     global vector_store
     
@@ -235,7 +310,25 @@ def delete_document_vectors(document_id: str):
                 docs_to_keep.append(doc)
         
         if docs_to_keep:
-            embeddings = get_embedding_model()
+            # Use appropriate embedding method
+            if settings.use_cohere_embeddings and settings.cohere_api_key:
+                class CohereEmbeddingsWrapper(Embeddings):
+                    def embed_documents(self, texts: List[str]) -> List[List[float]]:
+                        return generate_cohere_embeddings(texts)
+                    
+                    def embed_query(self, text: str) -> List[float]:
+                        client = get_cohere_client()
+                        response = client.embed(
+                            texts=[text],
+                            model="embed-english-light-v3.0",
+                            input_type="search_query"
+                        )
+                        return response.embeddings[0]
+                
+                embeddings = CohereEmbeddingsWrapper()
+            else:
+                embeddings = get_embedding_model()
+            
             vector_store = FAISS.from_documents(docs_to_keep, embeddings)
             save_vector_store()
             _update_cache_metadata()

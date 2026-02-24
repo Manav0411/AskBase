@@ -18,3 +18,5 @@ slowapi
 httpx
 email-validator
 gunicorn
+cohere>=5.0.0
+numpy

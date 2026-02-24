@@ -13,6 +13,10 @@ class Settings(BaseSettings):
     
     cors_origins: str = "http://localhost:5173"
     
+    # Cohere API for embeddings (free tier: 100 calls/min)
+    cohere_api_key: str = ""
+    use_cohere_embeddings: bool = True
+    
     default_page_size: int = 20
     max_page_size: int = 100
     
@@ -23,6 +27,7 @@ class Settings(BaseSettings):
     chunk_overlap: int = 50
     
     # Lightweight model optimized for free tier (80MB)
+    # Only used if use_cohere_embeddings=False
     embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
     
     use_mmr: bool = True

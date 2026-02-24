@@ -52,7 +52,7 @@ AskBase solves the problem of finding information scattered across company docum
 - **FAISS** - Facebook AI Similarity Search for vector storage
 - **LangChain** - Framework for LLM applications
 - **Groq API** - Fast LLM inference (llama-3.3-70b-versatile)
-- **HuggingFace** - Embedding models (sentence-transformers/all-MiniLM-L6-v2)
+- **Cohere API** - Fast embeddings API (embed-english-light-v3.0, free tier)
 - **JWT** - JSON Web Tokens for authentication
 - **Gunicorn** - Production WSGI server
 
@@ -76,6 +76,7 @@ AskBase solves the problem of finding information scattered across company docum
 - Node.js 18+
 - npm or yarn
 - Groq API key ([Get one here](https://console.groq.com/))
+- Cohere API key ([Get free tier here](https://dashboard.cohere.com/))
 
 ## 🚀 Quick Start
 
@@ -150,13 +151,17 @@ JWT_ALGORITHM=HS256
 # Database
 DATABASE_URL=sqlite:///./askbase.db
 
-# Groq API
+# Groq API (LLM for chat responses)
 GROQ_API_KEY=your-groq-api-key
+
+# Cohere API (Embeddings - Free tier: 100 calls/min)
+COHERE_API_KEY=your-cohere-api-key
+USE_COHERE_EMBEDDINGS=true
 
 # CORS
 CORS_ORIGINS=http://localhost:5173
 
-# Embeddings (optimized for free tier deployment)
+# Embeddings (only used if USE_COHERE_EMBEDDINGS=false)
 EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
 
 # RAG Configuration (optimized for free tier)
@@ -390,9 +395,10 @@ Result: Only John Doe and admins can access this document
    JWT_SECRET=<generate-secure-random-string>
    JWT_ALGORITHM=HS256
    GROQ_API_KEY=<your-groq-api-key>
+   COHERE_API_KEY=<your-cohere-api-key>
+   USE_COHERE_EMBEDDINGS=true
    DATABASE_URL=<postgres-internal-url-from-render>
    CORS_ORIGINS=https://your-frontend-url.vercel.app
-   EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
    CHUNK_SIZE=500
    CHUNK_OVERLAP=50
    PYTHON_VERSION=3.11.9
@@ -404,6 +410,24 @@ Result: Only John Doe and admins can access this document
 
 6. **Create Users**
    - Visit: `https://your-backend.onrender.com/seed-admin?force=true`
+
+#### **Getting API Keys**
+
+**Groq API Key (for LLM chat responses):**
+1. Go to https://console.groq.com/
+2. Sign up for free account
+3. Navigate to API Keys section
+4. Create new API key
+5. Copy and save securely
+
+**Cohere API Key (for document embeddings - FREE):**
+1. Go to https://dashboard.cohere.com/
+2. Sign up for free account (no credit card required)
+3. Navigate to API Keys section
+4. Copy your default API key
+5. **Free tier includes: 100 API calls/minute** (more than enough for most use cases)
+
+> **Why Cohere?** We use Cohere's free embedding API instead of local models to avoid memory issues and worker timeouts on free hosting tiers. This makes document processing 10x faster and eliminates cold start problems.
 
 #### Frontend Deployment (Vercel)
 
@@ -470,19 +494,25 @@ Result: Only John Doe and admins can access this document
 
 #### Free Tier Limitations
 
-**Current Setup (Render Free + Vercel Free):**
+**Current Setup (Render Free + Vercel Free + Cohere Free):**
 - ✅ **Cost**: $0/month (completely free)
-- ⚠️ **Vector Store**: Resets on backend restarts/redeploys
+- ✅ **Document Processing**: Fast with Cohere API (no timeouts!)
+- ⚠️ **Vector Store**: Resets on backend restarts/redeploys (ephemeral filesystem)
 - ✅ **Documents**: Persist in PostgreSQL (survives restarts)
 - ⚠️ **Performance**: Limited CPU/RAM (512MB)
 - ✅ **Uptime**: Good for demo/testing
-- ⚠️ **Cold Starts**: Backend sleeps after 15 min inactivity
-- ✅ **Re-upload**: Documents need re-upload after restarts for embeddings
+- ⚠️ **Cold Starts**: Backend sleeps after 15 min inactivity (~30 sec wake-up)
+- ✅ **Cohere API**: 100 calls/min free (enough for 100+ documents/hour)
+- ⚠️ **Re-upload**: Documents need re-processing after restarts to rebuild vector store
+
+**What Cohere Solves:**
+- ❌ **Before**: 80MB model download on every restart → worker timeouts → stuck in "processing"
+- ✅ **After**: External API → no downloads → documents process in 10-30 seconds → reliable
 
 **Workarounds:**
-1. Keep backend warm with uptime monitoring service
-2. Re-upload documents as needed (they're saved in DB)
-3. For production, upgrade to paid tier ($7-25/month)
+1. Keep backend warm with uptime monitoring service (e.g., UptimeRobot)
+2. Re-upload documents as needed after restarts (they're saved in DB, just need re-processing)
+3. For production, upgrade to paid tier ($7-25/month) for persistent filesystem
 
 #### Monitoring
 
@@ -574,6 +604,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [React](https://react.dev/) - Frontend library
 - [LangChain](https://www.langchain.com/) - LLM application framework
 - [Groq](https://groq.com/) - Fast LLM inference
+- [Cohere](https://cohere.com/) - Fast, reliable embeddings API (free tier)
 - [FAISS](https://github.com/facebookresearch/faiss) - Vector similarity search by Meta AI
 - [Material-UI](https://mui.com/) - React component library
 - [HuggingFace](https://huggingface.co/) - Embedding models and AI community
