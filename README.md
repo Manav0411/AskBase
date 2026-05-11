@@ -2,7 +2,7 @@
 
 **AskBase** is an AI-powered internal knowledge base designed for companies to manage and query their organizational documents. Administrators upload company policies, handbooks, procedures, and other critical documents, then grant access to specific employees or roles. Employees can then ask natural language questions and get instant, accurate answers powered by RAG (Retrieval Augmented Generation) technology.
 
-## 🌐 Live Demo
+## Live Demo
 
 - **Frontend**: https://ask-base-kappa.vercel.app
 - **Backend API**: https://askbase-backend.onrender.com
@@ -14,7 +14,7 @@
 - Engineer: `engineer@example.com` / `engineer123`
 - Intern: `intern@example.com` / `intern123`
 
-## 🎯 Use Case
+## Use Case
 
 AskBase solves the problem of finding information scattered across company documents. Instead of searching through hundreds of pages of policies, handbooks, or procedures, employees can simply ask questions and get AI-powered answers instantly.
 
@@ -23,28 +23,28 @@ AskBase solves the problem of finding information scattered across company docum
 - Admin uploads engineering guidelines → Only engineers get access → "What's our code review process?"
 - Admin uploads company policies → HR gets access → "How do we handle remote work requests?"
 
-## ✨ Key Features
+## Key Features
 
 ### For Administrators
-- 📤 **Document Upload** - Upload PDF documents (policies, handbooks, procedures)
-- 🔐 **Access Control** - Grant document access to specific users or entire roles
-- 📊 **Document Management** - View all documents, permissions, and usage
-- 👥 **User Management** - Control who has access to what information
+- **Document Upload** - Upload PDF documents (policies, handbooks, procedures)
+- **Access Control** - Grant document access to specific users or entire roles
+- **Document Management** - View all documents, permissions, and usage
+- **User Management** - Control who has access to what information
 
 ### For Employees
-- 📄 **Access Granted Documents** - See only documents they have permission to view
-- 💬 **AI-Powered Q&A** - Ask questions in natural language about accessible documents
-- 🎯 **Confidence Scores** - AI responses include confidence indicators
-- 📝 **Conversation History** - Track previous questions and conversations
-- 🔍 **Semantic Search** - Get relevant answers even with vague questions
+- **Access Granted Documents** - See only documents they have permission to view
+- **AI-Powered Q&A** - Ask questions in natural language about accessible documents
+- **Confidence Scores** - AI responses include confidence indicators
+- **Conversation History** - Track previous questions and conversations
+- **Semantic Search** - Get relevant answers even with vague questions
 
 ### Technical Features
-- 🧠 **RAG Technology** - FAISS vector store with semantic search for accurate retrieval
-- 🔐 **Secure Authentication** - JWT-based authentication with role-based access
-- ⚡ **Rate Limiting** - API protection against abuse
-- 🎨 **Modern UI** - Clean, responsive interface built with Material-UI
+- **RAG Technology** - FAISS vector store with semantic search for accurate retrieval
+- **Secure Authentication** - JWT-based authentication with role-based access
+- **Rate Limiting** - API protection against abuse
+- **Modern UI** - Clean, responsive interface built with Material-UI
 
-## 🏗️ Tech Stack
+## Tech Stack
 
 ### Backend
 - **FastAPI** - High-performance Python web framework
@@ -78,7 +78,7 @@ AskBase solves the problem of finding information scattered across company docum
 - Groq API key ([Get one here](https://console.groq.com/))
 - Cohere API key ([Get free tier here](https://dashboard.cohere.com/))
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Clone the Repository
 
@@ -183,7 +183,7 @@ Create a `.env` file in the `frontend` directory:
 VITE_API_URL=http://localhost:8000
 ```
 
-## � User Roles & Permissions
+## User Roles & Permissions
 
 ### Roles
 - **Admin** - Full system access: upload documents, manage permissions, access all documents
@@ -208,13 +208,13 @@ To create/recreate users in production:
 - Visit: `https://askbase-backend.onrender.com/seed-admin?force=true`
 - Or locally: `http://localhost:8000/seed-admin`
 
-## 📖 API Documentation
+## API Documentation
 
 Once the backend is running, visit:
 - **Swagger UI**: http://localhost:8000/docs
 - **ReDoc**: http://localhost:8000/redoc
 
-## 🔧 Development
+## Development
 
 ### Backend Development
 
@@ -272,7 +272,7 @@ AskBase/
 └── README.md
 ```
 
-## 🎯 Usage Guide
+## Usage Guide
 
 ### For Administrators
 
@@ -299,7 +299,7 @@ AskBase/
    - "What's the code review process?"
 5. **Review History** - Access previous conversations about documents
 
-## � Permission System
+## Permission System
 
 ### How Access Control Works
 
@@ -344,7 +344,7 @@ Admin grants access to: user "John Doe" (user ID: 3)
 Result: Only John Doe and admins can access this document
 ```
 
-## �🔒 Security Features
+## Security Features
 
 - JWT-based authentication
 - Password hashing with bcrypt
@@ -354,7 +354,7 @@ Result: Only John Doe and admins can access this document
 - CORS protection
 - Input validation
 
-## 🚀 Deployment
+## Deployment
 
 ### Current Deployment (Free Tier)
 
@@ -501,8 +501,8 @@ Result: Only John Doe and admins can access this document
 - ⚠️ **Re-upload**: Documents need re-processing after restarts to rebuild vector store
 
 **What Cohere Solves:**
-- ❌ **Before**: 80MB model download on every restart → worker timeouts → stuck in "processing"
-- ✅ **After**: External API → no downloads → documents process in 10-30 seconds → reliable
+- **Before**: 80MB model download on every restart → worker timeouts → stuck in "processing"
+- **After**: External API → no downloads → documents process in 10-30 seconds → reliable
 
 **Workarounds:**
 1. Keep backend warm with uptime monitoring service (e.g., UptimeRobot)
@@ -539,27 +539,8 @@ render logs -s your-service-name
 - Not needed if using managed vector DB
 - Can regenerate from documents if lost
 
-#### Maintenance
 
-**Regular Tasks:**
-- Monitor error logs weekly
-- Review user activity and access patterns
-- Update dependencies monthly
-- Test backups and restore procedures
-- Monitor API usage and rate limits
-
-**Scaling Checklist:**
-- [ ] Move to paid hosting tiers
-- [ ] Implement Redis caching
-- [ ] Add Celery for async tasks
-- [ ] Use managed vector database
-- [ ] Enable CDN for frontend assets
-- [ ] Set up monitoring (DataDog, New Relic, etc.)
-- [ ] Implement proper logging infrastructure
-- [ ] Add automated tests
-- [ ] Set up CI/CD pipelines
-
-## 💡 Common Use Cases
+## Common Use Cases
 
 ### HR Department
 - Employee Handbook Q&A
@@ -579,21 +560,11 @@ render logs -s your-service-name
 - Compliance documents
 - Training materials
 
-## 🤝 Contributing
 
-This is an internal company system. For feature requests or bug reports, please contact your IT administrator or create an issue in your internal repository.
-
-## 📧 Support
-
-For technical support:
-- Check the API documentation at `/docs`
-- Review application logs at `backend/askbase.log`
-- Contact your system administrator
-
-## 📝 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - [FastAPI](https://fastapi.tiangolo.com/) - Modern Python web framework
 - [React](https://react.dev/) - Frontend library
